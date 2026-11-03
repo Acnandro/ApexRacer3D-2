@@ -1,0 +1,221 @@
+{
+  "entities": {
+    "Lobby": {
+      "title": "Lobby",
+      "description": "Multiplayer race room where players gather and sync race status",
+      "type": "object",
+      "properties": {
+        "lobbyCode": {
+          "type": "string",
+          "description": "6-character room code for joining"
+        },
+        "name": {
+          "type": "string",
+          "description": "Lobby display title"
+        },
+        "hostId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the lobby host"
+        },
+        "hostName": {
+          "type": "string",
+          "description": "Display name of host"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["waiting", "racing", "finished"],
+          "description": "Current match phase"
+        },
+        "maxPlayers": {
+          "type": "integer",
+          "description": "Max players allowed (2-6)"
+        },
+        "playerCount": {
+          "type": "integer",
+          "description": "Current number of connected players"
+        },
+        "trackId": {
+          "type": "string",
+          "description": "Selected circuit ID"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp via serverTimestamp()"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp via serverTimestamp()"
+        }
+      },
+      "required": [
+        "lobbyCode",
+        "name",
+        "hostId",
+        "hostName",
+        "status",
+        "maxPlayers",
+        "playerCount",
+        "trackId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PlayerState": {
+      "title": "PlayerState",
+      "description": "Real-time state and vehicle transform of a player in a lobby",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the player"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Player racer nickname"
+        },
+        "carColor": {
+          "type": "string",
+          "description": "Hex vehicle color code"
+        },
+        "isReady": {
+          "type": "boolean",
+          "description": "Ready status before race launch"
+        },
+        "isHost": {
+          "type": "boolean",
+          "description": "Whether player is host"
+        },
+        "posX": {
+          "type": "number",
+          "description": "World space X coordinate"
+        },
+        "posY": {
+          "type": "number",
+          "description": "World space Y coordinate"
+        },
+        "posZ": {
+          "type": "number",
+          "description": "World space Z coordinate"
+        },
+        "rotY": {
+          "type": "number",
+          "description": "Heading angle in radians"
+        },
+        "speedKmh": {
+          "type": "number",
+          "description": "Current speed in km/h"
+        },
+        "isNitro": {
+          "type": "boolean",
+          "description": "Whether nitro boost is active"
+        },
+        "isBraking": {
+          "type": "boolean",
+          "description": "Whether vehicle is braking"
+        },
+        "currentLap": {
+          "type": "integer",
+          "description": "Current lap index (1-based)"
+        },
+        "checkpointIndex": {
+          "type": "integer",
+          "description": "Highest verified checkpoint index"
+        },
+        "lapTime": {
+          "type": "number",
+          "description": "Current lap running time in seconds"
+        },
+        "bestLapTime": {
+          "type": "number",
+          "description": "Best completed lap time in seconds"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Heartbeat timestamp via serverTimestamp()"
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "carColor",
+        "isReady",
+        "isHost",
+        "posX",
+        "posY",
+        "posZ",
+        "rotY",
+        "speedKmh",
+        "isNitro",
+        "isBraking",
+        "currentLap",
+        "checkpointIndex",
+        "lapTime",
+        "bestLapTime",
+        "updatedAt"
+      ]
+    },
+    "LeaderboardEntry": {
+      "title": "LeaderboardEntry",
+      "description": "Verified high score and lap record",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "User Auth UID"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Player racer nickname"
+        },
+        "trackId": {
+          "type": "string",
+          "description": "Circuit track ID"
+        },
+        "bestLapTime": {
+          "type": "number",
+          "description": "Best lap in seconds"
+        },
+        "vehicleClass": {
+          "type": "string",
+          "description": "Vehicle archetype or model"
+        },
+        "recordedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Recorded timestamp via serverTimestamp()"
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "trackId",
+        "bestLapTime",
+        "vehicleClass",
+        "recordedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/lobbies/{lobbyId}": {
+      "schema": {
+        "$ref": "#/entities/Lobby"
+      },
+      "description": "Multiplayer race lobby documents"
+    },
+    "/lobbies/{lobbyId}/players/{playerId}": {
+      "schema": {
+        "$ref": "#/entities/PlayerState"
+      },
+      "description": "Multiplayer participant sync entries"
+    },
+    "/leaderboards/{entryId}": {
+      "schema": {
+        "$ref": "#/entities/LeaderboardEntry"
+      },
+      "description": "Global circuit lap records"
+    }
+  }
+}

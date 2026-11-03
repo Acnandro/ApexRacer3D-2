@@ -1,0 +1,114 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidTimestamp(val) {
+      return val is timestamp && val <= request.time;
+    }
+
+    function isValidLobby(data) {
+      return data.keys().hasAll([
+        'lobbyCode', 'name', 'hostId', 'hostName', 'status',
+        'maxPlayers', 'playerCount', 'trackId', 'createdAt', 'updatedAt'
+      ]) &&
+      data.lobbyCode is string && data.lobbyCode.size() >= 4 && data.lobbyCode.size() <= 8 &&
+      data.name is string && data.name.size() > 0 && data.name.size() <= 50 &&
+      data.hostId is string && data.hostId.size() > 0 &&
+      data.hostName is string && data.hostName.size() > 0 && data.hostName.size() <= 30 &&
+      data.status in ['waiting', 'racing', 'finished'] &&
+      data.maxPlayers is int && data.maxPlayers >= 2 && data.maxPlayers <= 8 &&
+      data.playerCount is int && data.playerCount >= 0 && data.playerCount <= data.maxPlayers &&
+      data.trackId is string && data.trackId.size() > 0 &&
+      isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidPlayerState(data) {
+      return data.keys().hasAll([
+        'userId', 'displayName', 'carColor', 'isReady', 'isHost',
+        'posX', 'posY', 'posZ', 'rotY', 'speedKmh', 'isNitro',
+        'isBraking', 'currentLap', 'checkpointIndex', 'lapTime',
+        'bestLapTime', 'updatedAt'
+      ]) &&
+      data.userId is string && data.userId.size() > 0 &&
+      data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 30 &&
+      data.carColor is string && data.carColor.size() <= 16 &&
+      data.isReady is bool &&
+      data.isHost is bool &&
+      data.posX is number &&
+      data.posY is number &&
+      data.posZ is number &&
+      data.rotY is number &&
+      data.speedKmh is number &&
+      data.isNitro is bool &&
+      data.isBraking is bool &&
+      data.currentLap is int &&
+      data.checkpointIndex is int &&
+      data.lapTime is number &&
+      data.bestLapTime is number &&
+      isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidLeaderboardEntry(data) {
+      return data.keys().hasAll([
+        'userId', 'displayName', 'trackId', 'bestLapTime', 'vehicleClass', 'recordedAt'
+      ]) &&
+      data.userId is string && data.userId.size() > 0 &&
+      data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 30 &&
+      data.trackId is string && data.trackId.size() > 0 &&
+      data.bestLapTime is number && data.bestLapTime > 0.0 &&
+      data.vehicleClass is string && data.vehicleClass.size() > 0 &&
+      isValidTimestamp(data.recordedAt);
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Lobbies
+    match /lobbies/{lobbyId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+                    request.resource.data.hostId == request.auth.uid &&
+                    isValidLobby(request.resource.data);
+      allow update: if isAuthenticated() &&
+                    isValidLobby(request.resource.data) &&
+                    (resource.data.hostId == request.auth.uid ||
+                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playerCount', 'updatedAt']));
+      allow delete: if isAuthenticated() && resource.data.hostId == request.auth.uid;
+
+      // Subcollection: Players in this lobby
+      match /players/{playerId} {
+        allow read: if isAuthenticated();
+        allow create, update: if isAuthenticated() &&
+                              request.auth.uid == playerId &&
+                              request.resource.data.userId == request.auth.uid &&
+                              isValidPlayerState(request.resource.data);
+        allow delete: if isAuthenticated() &&
+                      (request.auth.uid == playerId || resource.data.userId == request.auth.uid);
+      }
+    }
+
+    // Leaderboards
+    match /leaderboards/{entryId} {
+      allow read: if true;
+      allow create: if isAuthenticated() &&
+                    request.resource.data.userId == request.auth.uid &&
+                    isValidLeaderboardEntry(request.resource.data);
+      allow update: if isAuthenticated() &&
+                    resource.data.userId == request.auth.uid &&
+                    request.resource.data.userId == request.auth.uid &&
+                    isValidLeaderboardEntry(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+  }
+}
